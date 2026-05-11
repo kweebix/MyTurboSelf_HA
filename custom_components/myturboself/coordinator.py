@@ -44,7 +44,7 @@ class MyTurboSelfDataUpdateCoordinator(DataUpdateCoordinator[AccountSnapshot]):
         """Fetch new data from TurboSelf."""
 
         try:
-            return await self.hass.async_add_executor_job(self._client.fetch_snapshot)
+            return await self._client.async_fetch_snapshot()
         except MyTurboSelfAuthError as err:
             raise ConfigEntryAuthFailed("TurboSelf authentication failed") from err
         except MyTurboSelfApiError as err:

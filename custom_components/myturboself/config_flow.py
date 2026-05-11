@@ -36,7 +36,7 @@ async def validate_input(
     client = TurboSelfPortalClient(data[CONF_USERNAME], data[CONF_PASSWORD])
 
     try:
-        snapshot = await hass.async_add_executor_job(client.fetch_snapshot)
+        snapshot = await client.async_fetch_snapshot()
     except MyTurboSelfAuthError as err:
         raise InvalidAuth from err
     except MyTurboSelfApiError as err:

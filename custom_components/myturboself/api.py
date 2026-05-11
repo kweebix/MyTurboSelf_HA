@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import html
 import re
-from typing import Any
 
-from bs4 import BeautifulSoup
-import requests
+import aiohttp
 
 from .const import DEFAULT_BASE_URL
 
@@ -45,9 +44,17 @@ LOGIN_USERNAME_FIELD = "ctl00$cntForm$txtLogin"
 LOGIN_PASSWORD_FIELD = "ctl00$cntForm$txtMotDePasse"
 TIMEOUT = 20
 
-HOME_DATA_RE = re.compile(r'name=\"(.*?)\".*value=\"(.*?)\"').findall
+HOME_DATA_RE = re.compile(r'name=\"(.*?)\".*?value=\"(.*?)\"', re.DOTALL).findall
 CREDITS_RE = re.compile(r"[>\n ]*?(\d+,\d+)|>Soit : (\d*) repas").findall
-USER_KEY_RE = re.compile(r"ctl00_cntForm_UC_HeaderTop_lbl(.*)_Smartphone").findall
+USER_DATA_RE = re.compile(
+    r'id=\"ctl00_cntForm_UC_HeaderTop_lbl(.*?)_Smartphone\"[^>]*>(.*?)<',
+    re.DOTALL,
+)
+HISTORY_ROW_RE = re.compile(
+    r'<tr[^>]*class=\"rowHistoStyle\"[^>]*>(.*?)</tr>',
+    re.DOTALL,
+)
+TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
 
 
 class TurboSelfPortalClient:
@@ -64,19 +71,20 @@ class TurboSelfPortalClient:
         self._username = username.strip()
         self._password = password
         self._base_url = base_url.rstrip("/") + "/"
-        self._session = requests.Session()
 
-    def fetch_snapshot(self) -> AccountSnapshot:
+    async def async_fetch_snapshot(self) -> AccountSnapshot:
         """Fetch the current TurboSelf account state."""
 
         if not self._username or not self._password:
             raise MyTurboSelfAuthError("TurboSelf credentials are not configured")
 
+        timeout = aiohttp.ClientTimeout(total=TIMEOUT)
         try:
-            self._login()
-            credits_page = self._get_page("CrediterCompte")
-            home_page = self._get_page("Accueil")
-        except requests.RequestException as err:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                await self._login(session)
+                credits_page = await self._get_page(session, "CrediterCompte")
+                home_page = await self._get_page(session, "Accueil")
+        except aiohttp.ClientError as err:
             raise MyTurboSelfApiError("TurboSelf is unreachable") from err
 
         balance, meals_left, meal_price = self._parse_credits(credits_page)
@@ -92,45 +100,56 @@ class TurboSelfPortalClient:
             latest_event=latest_event,
         )
 
-    def _login(self) -> None:
+    async def _login(self, session: aiohttp.ClientSession) -> None:
         """Log in to TurboSelf."""
 
-        homepage = self._session.get(
-            self._base_url + "Connexion.aspx",
-            timeout=TIMEOUT,
-        )
-        homepage.raise_for_status()
+        homepage = await self._request(session, "GET", "Connexion.aspx")
 
-        payload = {name: value for name, value in HOME_DATA_RE(homepage.text)}
+        payload = {name: value for name, value in HOME_DATA_RE(homepage)}
         payload[LOGIN_USERNAME_FIELD] = self._username
         payload[LOGIN_PASSWORD_FIELD] = self._password
 
-        response = self._session.post(
-            self._base_url + "Connexion.aspx",
+        response = await self._request(
+            session,
+            "POST",
+            "Connexion.aspx",
             data=payload,
-            timeout=TIMEOUT,
         )
-        response.raise_for_status()
 
-        if self._looks_like_login_page(response.text):
+        if self._looks_like_login_page(response):
             raise MyTurboSelfAuthError("TurboSelf rejected the credentials")
 
-    def _get_page(self, page_name: str) -> str:
+    async def _get_page(self, session: aiohttp.ClientSession, page_name: str) -> str:
         """Fetch an authenticated TurboSelf page."""
 
-        response = self._session.get(
-            self._base_url + page_name + ".aspx",
-            timeout=TIMEOUT,
+        return await self._request(
+            session,
+            "GET",
+            page_name + ".aspx",
         )
-        response.raise_for_status()
-        return response.text
+
+    async def _request(
+        self,
+        session: aiohttp.ClientSession,
+        method: str,
+        path: str,
+        data: dict[str, str] | None = None,
+    ) -> str:
+        """Run an HTTP request and return the HTML body."""
+
+        async with session.request(
+            method,
+            self._base_url + path,
+            data=data,
+        ) as response:
+            response.raise_for_status()
+            return await response.text()
 
     @staticmethod
     def _looks_like_login_page(html: str) -> bool:
         """Return whether the response still looks like the login page."""
 
-        soup = BeautifulSoup(html, "html.parser")
-        return soup.find("input", {"name": LOGIN_USERNAME_FIELD}) is not None
+        return LOGIN_USERNAME_FIELD in html
 
     @staticmethod
     def _parse_credits(html: str) -> tuple[float, int | None, float | None]:
@@ -156,46 +175,36 @@ class TurboSelfPortalClient:
         return balance, meals_left, meal_price
 
     @staticmethod
-    def _parse_user_data(html: str) -> dict[str, str]:
+    def _parse_user_data(page_html: str) -> dict[str, str]:
         """Parse user metadata from the account page."""
 
-        soup = BeautifulSoup(html, "html.parser")
-        modal_body = soup.find("div", {"class": "modal-body"})
-        if modal_body is None:
-            return {}
-
         data: dict[str, str] = {}
-        for span in modal_body.find_all("span"):
-            data_id = span.get("id")
-            if not data_id:
-                continue
-            keys = USER_KEY_RE(data_id)
-            if not keys:
-                continue
-            data[keys[0]] = span.text.strip()
+        for key, raw_value in USER_DATA_RE.findall(page_html):
+            value = _strip_tags(raw_value)
+            if value:
+                data[key] = value
 
         return data
 
     @staticmethod
-    def _parse_latest_event(html: str) -> AccountEvent | None:
+    def _parse_latest_event(page_html: str) -> AccountEvent | None:
         """Parse the latest account event."""
 
-        soup = BeautifulSoup(html, "html.parser")
-        line = soup.find("tr", {"class": "rowHistoStyle"})
-        if line is None:
+        match = HISTORY_ROW_RE.search(page_html)
+        if match is None:
             return None
 
-        columns = line.find_all("td")
+        columns = TD_RE.findall(match.group(1))
         if len(columns) < 2:
             return None
 
-        value_span = columns[1].find("span")
-        if value_span is None:
+        value_match = re.search(r"<span[^>]*>(.*?)</span>", columns[1], re.DOTALL)
+        if value_match is None:
             return None
 
-        raw_value = value_span.text.strip()
-        raw_name = columns[1].text.replace(raw_value, "").strip()
-        raw_date = columns[0].text.strip()
+        raw_value = _strip_tags(value_match.group(1))
+        raw_name = _strip_tags(re.sub(r"<span[^>]*>.*?</span>", "", columns[1], flags=re.DOTALL))
+        raw_date = _strip_tags(columns[0])
 
         try:
             event_date = datetime.strptime(raw_date, "%d/%m/%Y - %H:%M")
@@ -208,3 +217,11 @@ class TurboSelfPortalClient:
             date=event_date,
             value=numeric_value,
         )
+
+
+def _strip_tags(value: str) -> str:
+    """Remove HTML tags and normalize whitespace."""
+
+    text = re.sub(r"<[^>]+>", " ", value)
+    text = html.unescape(text)
+    return " ".join(text.split())
