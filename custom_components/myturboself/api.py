@@ -183,12 +183,17 @@ class TurboSelfPortalClient:
             else:
                 values.append(int(item))
 
-        if len(values) < 2:
+        if not values:
             raise MyTurboSelfApiError("Could not parse the account balance")
 
         balance = float(values[0])
         meals_left = int(values[1]) if len(values) >= 2 else None
-        meal_price = float(values[2]) if len(values) >= 3 else None
+        
+        # Calculate meal price if balance and meals_left are present
+        meal_price = None
+        if balance > 0 and meals_left and meals_left > 0:
+            meal_price = round(balance / meals_left, 2)
+
         return balance, meals_left, meal_price
 
     @staticmethod

@@ -6,6 +6,9 @@ from datetime import date, timedelta
 import math
 from typing import Any
 
+import holidays
+from vacances_scolaires_france import SchoolHolidayDates
+
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CURRENCY_EURO
@@ -23,10 +26,14 @@ from .const import (
     ATTR_SCHEDULE,
     ATTR_USER_DATA,
     CONF_MANUAL_MEAL_PRICE,
+    CONF_SCHOOL_ZONE,
+    CONF_SKIP_HOLIDAYS,
+    CONF_SKIP_VACATION,
     DEFAULT_MANUAL_MEAL_PRICE,
     DEFAULT_WEEKDAY_MEALS,
     DOMAIN,
     MEAL_DAY_OPTIONS,
+    MEAL_TYPES,
     WEEKDAY_LABELS,
 )
 from .coordinator import MyTurboSelfDataUpdateCoordinator
@@ -108,21 +115,31 @@ def _schedule(config_entry: ConfigEntry) -> dict[int, int]:
 
     schedule: dict[int, int] = {}
     for weekday_index, key in enumerate(MEAL_DAY_OPTIONS):
-        schedule[weekday_index] = int(
-            config_entry.options.get(key, DEFAULT_WEEKDAY_MEALS[key])
-        )
+        meals = config_entry.options.get(key, DEFAULT_WEEKDAY_MEALS[key])
+        # Handle transition from old int format if necessary
+        if isinstance(meals, int):
+            schedule[weekday_index] = meals
+        else:
+            schedule[weekday_index] = len(meals)
 
     return schedule
 
 
-def _schedule_attributes(config_entry: ConfigEntry) -> dict[str, int]:
+def _schedule_attributes(config_entry: ConfigEntry) -> dict[str, str]:
     """Return the schedule in a user-friendly format."""
 
-    schedule = _schedule(config_entry)
-    return {
-        WEEKDAY_LABELS[weekday_index]: meals
-        for weekday_index, meals in schedule.items()
-    }
+    attributes: dict[str, str] = {}
+    for weekday_index, key in enumerate(MEAL_DAY_OPTIONS):
+        meals = config_entry.options.get(key, DEFAULT_WEEKDAY_MEALS[key])
+        label = WEEKDAY_LABELS[weekday_index]
+        if isinstance(meals, int):
+            attributes[label] = str(meals)
+        elif not meals:
+            attributes[label] = "None"
+        else:
+            attributes[label] = ", ".join(MEAL_TYPES.get(m, m) for m in meals)
+
+    return attributes
 
 
 def _configured_meals_per_week(config_entry: ConfigEntry) -> int:
@@ -158,12 +175,27 @@ def _coverage(
     if not any(schedule.values()):
         return None, None
 
+    skip_holidays = config_entry.options.get(CONF_SKIP_HOLIDAYS, True)
+    fr_holidays = holidays.France() if skip_holidays else {}
+
+    skip_vacation = config_entry.options.get(CONF_SKIP_VACATION, True)
+    school_zone = config_entry.options.get(CONF_SCHOOL_ZONE, "C")
+    school_dates = SchoolHolidayDates() if skip_vacation else None
+
     remaining = meals_left
     service_days = 0
     last_date: date | None = None
     current = dt_util.now().date()
 
     for _ in range(366 * 3):
+        if skip_holidays and current in fr_holidays:
+            current += timedelta(days=1)
+            continue
+
+        if skip_vacation and school_dates and school_dates.is_holiday_for_zone(current, school_zone):
+            current += timedelta(days=1)
+            continue
+
         meals_today = schedule[current.weekday()]
         if meals_today > 0:
             if remaining < meals_today:
@@ -180,7 +212,7 @@ def _coverage(
 class MyTurboSelfBalanceSensor(MyTurboSelfEntity, SensorEntity):
     """Expose the current account balance."""
 
-    _attr_name = "Balance"
+    _attr_translation_key = "balance"
     _attr_icon = "mdi:wallet"
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = CURRENCY_EURO
@@ -220,7 +252,7 @@ class MyTurboSelfBalanceSensor(MyTurboSelfEntity, SensorEntity):
 class MyTurboSelfMealsLeftSensor(MyTurboSelfEntity, SensorEntity):
     """Expose the number of remaining meals."""
 
-    _attr_name = "Meals left"
+    _attr_translation_key = "meals_left"
     _attr_icon = "mdi:silverware-fork-knife"
     _attr_native_unit_of_measurement = "meals"
 
@@ -259,7 +291,7 @@ class MyTurboSelfMealsLeftSensor(MyTurboSelfEntity, SensorEntity):
 class MyTurboSelfUnitPriceSensor(MyTurboSelfEntity, SensorEntity):
     """Expose the price of one meal."""
 
-    _attr_name = "Meal price"
+    _attr_translation_key = "unit_price"
     _attr_icon = "mdi:currency-eur"
     _attr_device_class = SensorDeviceClass.MONETARY
     _attr_native_unit_of_measurement = CURRENCY_EURO
@@ -292,7 +324,7 @@ class MyTurboSelfUnitPriceSensor(MyTurboSelfEntity, SensorEntity):
 class MyTurboSelfServiceDaysLeftSensor(MyTurboSelfEntity, SensorEntity):
     """Expose the number of service days remaining."""
 
-    _attr_name = "Service days left"
+    _attr_translation_key = "service_days_left"
     _attr_icon = "mdi:calendar-range"
     _attr_native_unit_of_measurement = "days"
 
@@ -327,8 +359,8 @@ class MyTurboSelfServiceDaysLeftSensor(MyTurboSelfEntity, SensorEntity):
 class MyTurboSelfEstimatedEmptyDateSensor(MyTurboSelfEntity, SensorEntity):
     """Expose the estimated last covered service date."""
 
-    _attr_name = "Estimated empty date"
-    _attr_icon = "mdi:calendar-remove"
+    _attr_translation_key = "estimated_empty_date"
+    _attr_icon = "mdi:calendar-clock"
     _attr_device_class = SensorDeviceClass.DATE
 
     def __init__(

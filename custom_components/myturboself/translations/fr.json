@@ -9,6 +9,23 @@
           "password": "Mot de passe"
         }
       },
+      "setup_schedule": {
+        "title": "Parametres de calcul",
+        "description": "Selectionnez les repas que vous prenez chaque jour et le prix par repas s'il n'est pas detecte automatiquement.",
+        "data": {
+          "manual_meal_price": "Prix manuel du repas",
+          "skip_holidays": "Ignorer les jours fériés",
+          "skip_vacation": "Ignorer les vacances scolaires",
+          "school_zone": "Zone scolaire",
+          "meals_monday": "Lundi",
+          "meals_tuesday": "Mardi",
+          "meals_wednesday": "Mercredi",
+          "meals_thursday": "Jeudi",
+          "meals_friday": "Vendredi",
+          "meals_saturday": "Samedi",
+          "meals_sunday": "Dimanche"
+        }
+      },
       "reauth_confirm": {
         "title": "Reconnecter MyTurboSelf",
         "description": "TurboSelf a refuse le mot de passe enregistre. Entrez le nouveau mot de passe pour reconnecter l'integration.",
@@ -31,17 +48,45 @@
     "step": {
       "init": {
         "title": "Parametres de calcul",
-        "description": "Mettez 0 pour le prix du repas manuel afin de garder la detection automatique.",
+        "description": "Selectionnez les repas que vous prenez chaque jour. Mettez 0 pour le prix du repas manuel afin de garder la detection automatique.",
         "data": {
           "manual_meal_price": "Prix manuel du repas",
-          "meals_monday": "Repas le lundi",
-          "meals_tuesday": "Repas le mardi",
-          "meals_wednesday": "Repas le mercredi",
-          "meals_thursday": "Repas le jeudi",
-          "meals_friday": "Repas le vendredi",
-          "meals_saturday": "Repas le samedi",
-          "meals_sunday": "Repas le dimanche"
+          "skip_holidays": "Ignorer les jours fériés",
+          "skip_vacation": "Ignorer les vacances scolaires",
+          "school_zone": "Zone scolaire",
+          "meals_monday": "Lundi",
+          "meals_tuesday": "Mardi",
+          "meals_wednesday": "Mercredi",
+          "meals_thursday": "Jeudi",
+          "meals_friday": "Vendredi",
+          "meals_saturday": "Samedi",
+          "meals_sunday": "Dimanche"
         }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": { "name": "Solde" },
+      "unit_price": { "name": "Prix du repas" },
+      "meals_left": { "name": "Repas restants" },
+      "service_days_left": { "name": "Jours de service restants" },
+      "estimated_empty_date": { "name": "Date de fin previsionnelle" }
+    }
+  },
+  "selector": {
+    "meal_types": {
+      "options": {
+        "breakfast": "Petit-déjeuner",
+        "lunch": "Midi",
+        "dinner": "Soir"
+      }
+    },
+    "school_zone": {
+      "options": {
+        "A": "Zone A",
+        "B": "Zone B",
+        "C": "Zone C"
       }
     }
   }

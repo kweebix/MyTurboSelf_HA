@@ -1,4 +1,5 @@
 {
   "name": "MyTurboSelf",
-  "render_readme": true
+  "render_readme": true,
+  "brand": true
 }

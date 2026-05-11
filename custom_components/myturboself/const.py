@@ -5,6 +5,9 @@ from datetime import timedelta
 from homeassistant.const import Platform
 
 CONF_MANUAL_MEAL_PRICE = "manual_meal_price"
+CONF_SKIP_HOLIDAYS = "skip_holidays"
+CONF_SKIP_VACATION = "skip_vacation"
+CONF_SCHOOL_ZONE = "school_zone"
 CONF_MEALS_FRIDAY = "meals_friday"
 CONF_MEALS_MONDAY = "meals_monday"
 CONF_MEALS_SATURDAY = "meals_saturday"
@@ -29,15 +32,25 @@ ATTR_REMOTE_MEALS_LEFT = "remote_meals_left"
 ATTR_SCHEDULE = "schedule"
 ATTR_USER_DATA = "user_data"
 
+MEAL_TYPE_BREAKFAST = "breakfast"
+MEAL_TYPE_LUNCH = "lunch"
+MEAL_TYPE_DINNER = "dinner"
+
+MEAL_TYPES = {
+    MEAL_TYPE_BREAKFAST: "Petit-déjeuner",
+    MEAL_TYPE_LUNCH: "Midi",
+    MEAL_TYPE_DINNER: "Soir",
+}
+
 DEFAULT_MANUAL_MEAL_PRICE = 0.0
-DEFAULT_WEEKDAY_MEALS: dict[str, int] = {
-    CONF_MEALS_MONDAY: 1,
-    CONF_MEALS_TUESDAY: 1,
-    CONF_MEALS_WEDNESDAY: 1,
-    CONF_MEALS_THURSDAY: 1,
-    CONF_MEALS_FRIDAY: 1,
-    CONF_MEALS_SATURDAY: 0,
-    CONF_MEALS_SUNDAY: 0,
+DEFAULT_WEEKDAY_MEALS: dict[str, list[str]] = {
+    CONF_MEALS_MONDAY: [MEAL_TYPE_LUNCH],
+    CONF_MEALS_TUESDAY: [MEAL_TYPE_LUNCH],
+    CONF_MEALS_WEDNESDAY: [MEAL_TYPE_LUNCH],
+    CONF_MEALS_THURSDAY: [MEAL_TYPE_LUNCH],
+    CONF_MEALS_FRIDAY: [MEAL_TYPE_LUNCH],
+    CONF_MEALS_SATURDAY: [],
+    CONF_MEALS_SUNDAY: [],
 }
 
 MEAL_DAY_OPTIONS: tuple[str, ...] = (

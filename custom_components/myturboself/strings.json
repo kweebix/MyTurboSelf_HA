@@ -9,6 +9,23 @@
           "password": "Password"
         }
       },
+      "setup_schedule": {
+        "title": "Calculation settings",
+        "description": "Select the meals you take each day and set the price per meal if it's not detected automatically.",
+        "data": {
+          "manual_meal_price": "Manual meal price",
+          "skip_holidays": "Skip public holidays",
+          "skip_vacation": "Skip school vacations",
+          "school_zone": "School zone",
+          "meals_monday": "Monday",
+          "meals_tuesday": "Tuesday",
+          "meals_wednesday": "Wednesday",
+          "meals_thursday": "Thursday",
+          "meals_friday": "Friday",
+          "meals_saturday": "Saturday",
+          "meals_sunday": "Sunday"
+        }
+      },
       "reauth_confirm": {
         "title": "Reconnect MyTurboSelf",
         "description": "TurboSelf rejected the stored password. Enter the new password to reconnect the integration.",
@@ -31,17 +48,45 @@
     "step": {
       "init": {
         "title": "Calculation settings",
-        "description": "Set 0 for the manual meal price to keep automatic detection.",
+        "description": "Select the meals you take each day. Set 0 for the manual meal price to keep automatic detection.",
         "data": {
           "manual_meal_price": "Manual meal price",
-          "meals_monday": "Meals on Monday",
-          "meals_tuesday": "Meals on Tuesday",
-          "meals_wednesday": "Meals on Wednesday",
-          "meals_thursday": "Meals on Thursday",
-          "meals_friday": "Meals on Friday",
-          "meals_saturday": "Meals on Saturday",
-          "meals_sunday": "Meals on Sunday"
+          "skip_holidays": "Skip public holidays",
+          "skip_vacation": "Skip school vacations",
+          "school_zone": "School zone",
+          "meals_monday": "Monday",
+          "meals_tuesday": "Tuesday",
+          "meals_wednesday": "Wednesday",
+          "meals_thursday": "Thursday",
+          "meals_friday": "Friday",
+          "meals_saturday": "Saturday",
+          "meals_sunday": "Sunday"
         }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": { "name": "Balance" },
+      "unit_price": { "name": "Meal price" },
+      "meals_left": { "name": "Meals left" },
+      "service_days_left": { "name": "Service days left" },
+      "estimated_empty_date": { "name": "Estimated empty date" }
+    }
+  },
+  "selector": {
+    "meal_types": {
+      "options": {
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "dinner": "Dinner"
+      }
+    },
+    "school_zone": {
+      "options": {
+        "A": "Zone A",
+        "B": "Zone B",
+        "C": "Zone C"
       }
     }
   }

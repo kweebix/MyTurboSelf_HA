@@ -13,6 +13,11 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from .api import (
     MyTurboSelfApiError,
@@ -21,6 +26,9 @@ from .api import (
 )
 from .const import (
     CONF_MANUAL_MEAL_PRICE,
+    CONF_SCHOOL_ZONE,
+    CONF_SKIP_HOLIDAYS,
+    CONF_SKIP_VACATION,
     DEFAULT_MANUAL_MEAL_PRICE,
     DEFAULT_WEEKDAY_MEALS,
     DOMAIN,
@@ -76,6 +84,11 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        """Initialize the flow."""
+        self._setup_data: dict[str, Any] = {}
+        self._setup_info: dict[str, Any] = {}
+
     @staticmethod
     @callback
     def async_get_options_flow(
@@ -94,12 +107,12 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            payload = {
+            self._setup_data = {
                 CONF_USERNAME: user_input[CONF_USERNAME].strip(),
                 CONF_PASSWORD: user_input[CONF_PASSWORD],
             }
             try:
-                info = await validate_input(self.hass, payload)
+                self._setup_info = await validate_input(self.hass, self._setup_data)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
@@ -108,12 +121,9 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                await self.async_set_unique_id(info["unique_id"])
+                await self.async_set_unique_id(self._setup_info["unique_id"])
                 self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=info["title"],
-                    data=payload,
-                )
+                return await self.async_step_setup_schedule()
 
         return self.async_show_form(
             step_id="user",
@@ -124,6 +134,84 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_setup_schedule(
+        self,
+        user_input: dict[str, Any] | None = None,
+    ) -> config_entries.ConfigFlowResult:
+        """Handle the schedule setup step."""
+
+        if user_input is not None:
+            options = {
+                CONF_MANUAL_MEAL_PRICE: float(user_input[CONF_MANUAL_MEAL_PRICE]),
+                CONF_SKIP_HOLIDAYS: bool(user_input[CONF_SKIP_HOLIDAYS]),
+                CONF_SKIP_VACATION: bool(user_input[CONF_SKIP_VACATION]),
+                CONF_SCHOOL_ZONE: str(user_input[CONF_SCHOOL_ZONE]),
+                **{
+                    key: user_input[key]
+                    for key in MEAL_DAY_OPTIONS
+                },
+            }
+            return self.async_create_entry(
+                title=self._setup_info["title"],
+                data=self._setup_data,
+                options=options,
+            )
+
+        data_schema: dict[Any, Any] = {
+            vol.Required(
+                CONF_MANUAL_MEAL_PRICE,
+                default=float(DEFAULT_MANUAL_MEAL_PRICE),
+            ): vol.Coerce(float),
+            vol.Required(
+                CONF_SKIP_HOLIDAYS,
+                default=True,
+            ): bool,
+            vol.Required(
+                CONF_SKIP_VACATION,
+                default=True,
+            ): bool,
+            vol.Required(
+                CONF_SCHOOL_ZONE,
+                default="C",
+            ): SelectSelector(
+                SelectSelectorConfig(
+                    options=[
+                        {"value": "A", "label": "Zone A"},
+                        {"value": "B", "label": "Zone B"},
+                        {"value": "C", "label": "Zone C"},
+                    ],
+                    mode=SelectSelectorMode.DROPDOWN,
+                    translation_key="school_zone",
+                )
+            ),
+        }
+
+        meal_selector = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    {"value": "breakfast", "label": "breakfast"},
+                    {"value": "lunch", "label": "lunch"},
+                    {"value": "dinner", "label": "dinner"},
+                ],
+                mode=SelectSelectorMode.LIST,
+                multiple=True,
+                translation_key="meal_types",
+            )
+        )
+
+        for key in MEAL_DAY_OPTIONS:
+            data_schema[
+                vol.Optional(
+                    key,
+                    default=DEFAULT_WEEKDAY_MEALS[key],
+                )
+            ] = meal_selector
+
+        return self.async_show_form(
+            step_id="setup_schedule",
+            data_schema=vol.Schema(data_schema),
         )
 
     async def async_step_reauth(
@@ -204,8 +292,11 @@ class MyTurboSelfOptionsFlow(config_entries.OptionsFlow):
                 title="",
                 data={
                     CONF_MANUAL_MEAL_PRICE: float(user_input[CONF_MANUAL_MEAL_PRICE]),
+                    CONF_SKIP_HOLIDAYS: bool(user_input[CONF_SKIP_HOLIDAYS]),
+                    CONF_SKIP_VACATION: bool(user_input[CONF_SKIP_VACATION]),
+                    CONF_SCHOOL_ZONE: str(user_input[CONF_SCHOOL_ZONE]),
                     **{
-                        key: int(user_input[key])
+                        key: user_input[key]
                         for key in MEAL_DAY_OPTIONS
                     },
                 },
@@ -222,15 +313,50 @@ class MyTurboSelfOptionsFlow(config_entries.OptionsFlow):
                     )
                 ),
             ): vol.Coerce(float),
+            vol.Required(
+                CONF_SKIP_HOLIDAYS,
+                default=options.get(CONF_SKIP_HOLIDAYS, True),
+            ): bool,
+            vol.Required(
+                CONF_SKIP_VACATION,
+                default=options.get(CONF_SKIP_VACATION, True),
+            ): bool,
+            vol.Required(
+                CONF_SCHOOL_ZONE,
+                default=options.get(CONF_SCHOOL_ZONE, "C"),
+            ): SelectSelector(
+                SelectSelectorConfig(
+                    options=[
+                        {"value": "A", "label": "Zone A"},
+                        {"value": "B", "label": "Zone B"},
+                        {"value": "C", "label": "Zone C"},
+                    ],
+                    mode=SelectSelectorMode.DROPDOWN,
+                    translation_key="school_zone",
+                )
+            ),
         }
+
+        meal_selector = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    {"value": "breakfast", "label": "breakfast"},
+                    {"value": "lunch", "label": "lunch"},
+                    {"value": "dinner", "label": "dinner"},
+                ],
+                mode=SelectSelectorMode.LIST,
+                multiple=True,
+                translation_key="meal_types",
+            )
+        )
 
         for key in MEAL_DAY_OPTIONS:
             data_schema[
-                vol.Required(
+                vol.Optional(
                     key,
-                    default=int(options.get(key, DEFAULT_WEEKDAY_MEALS[key])),
+                    default=options.get(key, DEFAULT_WEEKDAY_MEALS[key]),
                 )
-            ] = vol.All(vol.Coerce(int), vol.Range(min=0, max=10))
+            ] = meal_selector
 
         return self.async_show_form(
             step_id="init",
