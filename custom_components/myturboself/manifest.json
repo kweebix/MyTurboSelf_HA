@@ -1,12 +1,12 @@
 {
   "domain": "myturboself",
   "name": "MyTurboSelf",
-  "codeowners": ["@tomsphotographie"],
+  "codeowners": ["@kweebix"],
   "config_flow": true,
-  "documentation": "https://github.com/tomsphotographie/myturboself",
+  "documentation": "https://github.com/kweebix/myturboself",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/tomsphotographie/myturboself/issues",
+  "issue_tracker": "https://github.com/kweebix/myturboself/issues",
   "loggers": ["custom_components.myturboself"],
   "requirements": ["beautifulsoup4==4.12.3", "requests==2.32.3"],
   "version": "0.1.0"
