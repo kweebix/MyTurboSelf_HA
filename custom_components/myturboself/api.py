@@ -105,7 +105,7 @@ class TurboSelfPortalClient:
     async def _login(self, session: aiohttp.ClientSession) -> None:
         """Log in to TurboSelf."""
 
-        homepage = await self._request(session, "GET", "Connexion.aspx")
+        homepage, _ = await self._request(session, "GET", "Connexion.aspx")
 
         payload = _extract_inputs(homepage)
         if not payload:

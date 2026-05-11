@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import voluptuous as vol
@@ -25,6 +26,8 @@ from .const import (
     DOMAIN,
     MEAL_DAY_OPTIONS,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def validate_input(
@@ -101,7 +104,8 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:  # pragma: no cover - defensive.
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
                 await self.async_set_unique_id(info["unique_id"])
@@ -153,7 +157,8 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
-            except Exception:  # pragma: no cover - defensive.
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
                 self.hass.config_entries.async_update_entry(
