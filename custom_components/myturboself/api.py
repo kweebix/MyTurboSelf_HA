@@ -55,6 +55,8 @@ HISTORY_ROW_RE = re.compile(
     re.DOTALL,
 )
 TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
+INPUT_RE = re.compile(r"<input\b([^>]+)/?>", re.IGNORECASE)
+INPUT_ATTR_RE = re.compile(r'([A-Za-z_:][A-Za-z0-9_:\-]*)=\"(.*?)\"', re.DOTALL)
 
 
 class TurboSelfPortalClient:
@@ -105,28 +107,37 @@ class TurboSelfPortalClient:
 
         homepage = await self._request(session, "GET", "Connexion.aspx")
 
-        payload = {name: value for name, value in HOME_DATA_RE(homepage)}
+        payload = _extract_inputs(homepage)
+        if not payload:
+            payload = {name: value for name, value in HOME_DATA_RE(homepage)}
+
         payload[LOGIN_USERNAME_FIELD] = self._username
         payload[LOGIN_PASSWORD_FIELD] = self._password
+        payload.setdefault("ctl00$cntForm$ssoUser", "")
+        payload["ctl00$cntForm$btnConnexion"] = "Connexion"
 
-        response = await self._request(
+        response, response_url = await self._request(
             session,
             "POST",
             "Connexion.aspx",
             data=payload,
+            referer=self._base_url + "Connexion.aspx",
         )
 
-        if self._looks_like_login_page(response):
+        if response_url.endswith("/Connexion.aspx") and self._looks_like_login_page(
+            response
+        ):
             raise MyTurboSelfAuthError("TurboSelf rejected the credentials")
 
     async def _get_page(self, session: aiohttp.ClientSession, page_name: str) -> str:
         """Fetch an authenticated TurboSelf page."""
 
-        return await self._request(
+        response, _ = await self._request(
             session,
             "GET",
             page_name + ".aspx",
         )
+        return response
 
     async def _request(
         self,
@@ -134,16 +145,22 @@ class TurboSelfPortalClient:
         method: str,
         path: str,
         data: dict[str, str] | None = None,
-    ) -> str:
-        """Run an HTTP request and return the HTML body."""
+        referer: str | None = None,
+    ) -> tuple[str, str]:
+        """Run an HTTP request and return the HTML body and final URL."""
+
+        headers = {}
+        if referer:
+            headers["Referer"] = referer
 
         async with session.request(
             method,
             self._base_url + path,
             data=data,
+            headers=headers,
         ) as response:
             response.raise_for_status()
-            return await response.text()
+            return await response.text(), str(response.url)
 
     @staticmethod
     def _looks_like_login_page(html: str) -> bool:
@@ -225,3 +242,21 @@ def _strip_tags(value: str) -> str:
     text = re.sub(r"<[^>]+>", " ", value)
     text = html.unescape(text)
     return " ".join(text.split())
+
+
+def _extract_inputs(page_html: str) -> dict[str, str]:
+    """Extract named input values from the login form."""
+
+    payload: dict[str, str] = {}
+
+    for raw_attrs in INPUT_RE.findall(page_html):
+        attrs = {
+            key.lower(): html.unescape(value)
+            for key, value in INPUT_ATTR_RE.findall(raw_attrs)
+        }
+        name = attrs.get("name")
+        if not name:
+            continue
+        payload[name] = attrs.get("value", "")
+
+    return payload
