@@ -1,0 +1,48 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ajouter un compte MyTurboSelf",
+        "description": "Entrez les identifiants utilises sur MyTurboSelf.",
+        "data": {
+          "username": "Identifiant",
+          "password": "Mot de passe"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnecter MyTurboSelf",
+        "description": "TurboSelf a refuse le mot de passe enregistre. Entrez le nouveau mot de passe pour reconnecter l'integration.",
+        "data": {
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentification invalide",
+      "cannot_connect": "Connexion impossible a TurboSelf",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Ce compte est deja configure",
+      "reauth_successful": "La reauthentification a reussi"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Parametres de calcul",
+        "description": "Mettez 0 pour le prix du repas manuel afin de garder la detection automatique.",
+        "data": {
+          "manual_meal_price": "Prix manuel du repas",
+          "meals_monday": "Repas le lundi",
+          "meals_tuesday": "Repas le mardi",
+          "meals_wednesday": "Repas le mercredi",
+          "meals_thursday": "Repas le jeudi",
+          "meals_friday": "Repas le vendredi",
+          "meals_saturday": "Repas le samedi",
+          "meals_sunday": "Repas le dimanche"
+        }
+      }
+    }
+  }
+}

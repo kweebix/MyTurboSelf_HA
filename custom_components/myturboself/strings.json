@@ -1,0 +1,48 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add MyTurboSelf account",
+        "description": "Enter the credentials you use on MyTurboSelf.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect MyTurboSelf",
+        "description": "TurboSelf rejected the stored password. Enter the new password to reconnect the integration.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid credentials",
+      "cannot_connect": "Could not connect to TurboSelf",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This account is already configured",
+      "reauth_successful": "Re-authentication was successful"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Calculation settings",
+        "description": "Set 0 for the manual meal price to keep automatic detection.",
+        "data": {
+          "manual_meal_price": "Manual meal price",
+          "meals_monday": "Meals on Monday",
+          "meals_tuesday": "Meals on Tuesday",
+          "meals_wednesday": "Meals on Wednesday",
+          "meals_thursday": "Meals on Thursday",
+          "meals_friday": "Meals on Friday",
+          "meals_saturday": "Meals on Saturday",
+          "meals_sunday": "Meals on Sunday"
+        }
+      }
+    }
+  }
+}
