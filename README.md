@@ -41,6 +41,17 @@ Le calcul suit cette logique :
 
 ## Installation
 
+### Via HACS
+
+1. Ajouter ce depot comme `Custom repository` de type `Integration` dans HACS.
+2. Installer `MyTurboSelf` depuis HACS.
+3. Redemarrer Home Assistant.
+4. Aller dans `Settings > Devices & Services > Add Integration`.
+5. Rechercher `MyTurboSelf`.
+6. Entrer ton identifiant et ton mot de passe TurboSelf.
+
+### Manuel
+
 1. Copier `custom_components/myturboself` dans le dossier de configuration Home Assistant.
 2. Redemarrer Home Assistant.
 3. Aller dans `Settings > Devices & Services > Add Integration`.
