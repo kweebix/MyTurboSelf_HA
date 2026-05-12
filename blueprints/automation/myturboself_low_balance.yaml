@@ -2,6 +2,7 @@ blueprint:
   name: "Alerte Repas TurboSelf Bas"
   description: "Envoie une notification quand le nombre de repas restants sur votre compte TurboSelf descend en dessous d'un certain seuil."
   domain: automation
+  source_url: https://github.com/kweebix/MyTurboSelf_HA/blob/main/blueprints/automation/myturboself_low_balance.yaml
   input:
     meals_sensor:
       name: "Capteur de repas restants"

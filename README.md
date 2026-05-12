@@ -61,8 +61,10 @@ Lors de l'installation (ou via le bouton "Configurer"), vous pouvez :
 ## Blueprints (Modèles d'automatisation)
 
 Cette intégration inclut un **Blueprint** pour vous faciliter la vie :
-- **Alerte Solde TurboSelf Bas** : Recevez une notification (ou toute autre action de votre choix) quand votre solde descend sous un certain seuil.
-  - Pour l'utiliser : Paramètres > Automatisations et scènes > Créer une automatisation > Utiliser un modèle > Alerte Solde TurboSelf Bas.
+
+[![Ouvrir votre instance Home Assistant et afficher le lien vers un modèle d'automatisation (blueprint) dans GitHub.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fkweebix%2FMyTurboSelf_HA%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fmyturboself_low_balance.yaml)
+
+- **Alerte Repas TurboSelf Bas** : Recevez une notification (ou toute autre action de votre choix) quand votre nombre de repas descend sous un certain seuil.
 
 ## Notes
 
