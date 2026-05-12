@@ -184,7 +184,7 @@ def _coverage(
 
     remaining = meals_left
     service_days = 0
-    last_date: date | None = None
+    empty_date: date | None = None
     current = dt_util.now().date()
 
     for _ in range(366 * 3):
@@ -199,14 +199,14 @@ def _coverage(
         meals_today = schedule[current.weekday()]
         if meals_today > 0:
             if remaining < meals_today:
+                empty_date = current
                 break
             remaining -= meals_today
             service_days += 1
-            last_date = current
 
         current += timedelta(days=1)
 
-    return service_days, last_date
+    return service_days, empty_date
 
 
 class MyTurboSelfBalanceSensor(MyTurboSelfEntity, SensorEntity):
@@ -374,10 +374,10 @@ class MyTurboSelfEstimatedEmptyDateSensor(MyTurboSelfEntity, SensorEntity):
 
     @property
     def native_value(self) -> date | None:
-        """Return the last date fully covered by the balance."""
+        """Return the first date not fully covered by the balance."""
 
-        _, last_date = _coverage(self.coordinator.data, self._config_entry)
-        return last_date
+        _, empty_date = _coverage(self.coordinator.data, self._config_entry)
+        return empty_date
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

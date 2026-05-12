@@ -1,66 +1,63 @@
 # MyTurboSelf for Home Assistant
 
-Cette base contient :
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+![Version](https://img.shields.io/badge/version-v0.1.7-orange.svg)
 
-- une integration Home Assistant `custom_components/myturboself`
+Intégration personnalisée pour Home Assistant permettant de suivre votre compte TurboSelf (cantine/restauration scolaire).
 
-Le principe est simple :
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kweebix/myturboself/main/brand/logo.png" alt="MyTurboSelf Logo" width="200">
+</p>
 
-1. l'integration se connecte directement au site web TurboSelf
-2. elle recupere le solde et les informations utiles
-3. elle calcule les capteurs Home Assistant
+## Caractéristiques
 
-Il n'y a aucune dependance a la librairie non officielle `turboself`.
+- **Connexion directe** : Se connecte au portail TurboSelf sans dépendance externe.
+- **Suivi précis** : Récupère le solde, le prix unitaire du repas et les informations du compte.
+- **Planning intelligent** : Configurez vos repas (Petit-déjeuner, Midi, Soir) pour chaque jour de la semaine via des cases à cocher.
+- **Calcul de fin prévisionnelle** : Estime la date à laquelle votre compte sera vide en prenant en compte :
+  - Votre planning hebdomadaire.
+  - Les **jours fériés** (France).
+  - Les **vacances scolaires** (Zones A, B, C).
+- **Optimisation des ressources** : Fréquence de mise à jour dynamique (toutes les 15 min en période de repas, toutes les 4h la nuit et pendant les vacances).
 
-## Architecture
+## Capteurs disponibles
 
-### Integration `myturboself`
-
-L'integration Home Assistant se connecte directement au portail TurboSelf et calcule :
-
-- `Balance`
-- `Meal price`
-- `Meals left`
-- `Service days left`
-- `Estimated empty date`
-
-## Parametres de calcul
-
-Dans les options de l'integration, tu peux definir :
-
-- un prix manuel du repas
-- le nombre de repas par jour pour chaque jour de la semaine
-
-Le calcul suit cette logique :
-
-- si un prix manuel est defini, il est prioritaire
-- sinon le prix renvoye par TurboSelf est utilise
-- `Meals left = floor(balance / prix_du_repas)` si un prix est connu
-- sinon `meals_left` renvoye par TurboSelf est utilise
-- `Service days left` et `Estimated empty date` suivent le planning hebdomadaire configure
+| Capteur | Description |
+| --- | --- |
+| **Solde** | Le montant disponible sur votre compte en €. |
+| **Prix du repas** | Le prix d'un repas (détecté automatiquement ou forcé manuellement). |
+| **Repas restants** | Le nombre de repas que vous pouvez encore prendre. |
+| **Jours de service restants** | Le nombre de jours de cantine couverts par votre solde. |
+| **Date de fin prévisionnelle** | Le premier jour où vous n'aurez plus assez de crédit pour vos repas. |
 
 ## Installation
 
-### Via HACS
+### Via HACS (Recommandé)
 
-1. Ajouter ce depot comme `Custom repository` de type `Integration` dans HACS.
-2. Installer `MyTurboSelf` depuis HACS.
-3. Redemarrer Home Assistant.
-4. Aller dans `Settings > Devices & Services > Add Integration`.
-5. Rechercher `MyTurboSelf`.
-6. Entrer ton identifiant et ton mot de passe TurboSelf.
+1. Ouvrez **HACS** dans votre instance Home Assistant.
+2. Cliquez sur les trois points en haut à droite et choisissez **Dépôts personnalisés**.
+3. Ajoutez l'URL de ce dépôt, sélectionnez **Intégration** comme catégorie et cliquez sur **Ajouter**.
+4. Recherchez et installez l'intégration **MyTurboSelf**.
+5. Redémarrez Home Assistant.
+6. Allez dans **Paramètres > Appareils et services > Ajouter une intégration**.
+7. Recherchez **MyTurboSelf** et suivez les instructions.
 
-### Manuel
+### Manuelle
 
-1. Copier `custom_components/myturboself` dans le dossier de configuration Home Assistant.
-2. Redemarrer Home Assistant.
-3. Aller dans `Settings > Devices & Services > Add Integration`.
-4. Rechercher `MyTurboSelf`.
-5. Entrer ton identifiant et ton mot de passe TurboSelf.
+1. Copiez le dossier `custom_components/myturboself` dans votre dossier `config/custom_components/`.
+2. Redémarrez Home Assistant.
+3. Ajoutez l'intégration via l'interface utilisateur.
+
+## Configuration
+
+Lors de l'installation (ou via le bouton "Configurer"), vous pouvez :
+- Choisir vos jours et types de repas (**Petit-déjeuner**, **Midi**, **Soir**).
+- Activer/Désactiver l'ignorance des **jours fériés**.
+- Activer/Désactiver l'ignorance des **vacances scolaires** et choisir votre **Zone (A, B, C)**.
+- Définir un **prix de repas manuel** si la détection automatique échoue ou si vous souhaitez forcer un tarif spécifique.
 
 ## Notes
 
-- Intervalle de mise a jour Home Assistant : 15 minutes.
-- Il n'y a aucune logique de reservation.
-- Le scraping est fait directement par le custom component.
-- Le depot contient la structure HACS minimale pour un repository de type `integration`.
+- L'intervalle de mise à jour est de 15 minutes entre 06:00 et 23:00 les jours de repas.
+- Il n'y a aucune logique de réservation dans cette intégration.
+- Les données sont extraites directement du portail web TurboSelf.
