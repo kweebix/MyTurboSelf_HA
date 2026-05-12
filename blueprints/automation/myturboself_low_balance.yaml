@@ -1,19 +1,22 @@
 blueprint:
   name: "Alerte Repas TurboSelf Bas"
-  description: "Envoie une notification quand le nombre de repas restants sur votre compte TurboSelf descend en dessous d'un certain seuil."
+  description: >
+    Envoie une notification quand le nombre de repas restants descend en dessous du seuil.
+    
+    Exemples de texte :
+    - "Attention ! Il ne reste que {{ meals }} repas sur le compte TurboSelf."
+    - "Solde bas : {{ meals }} repas restants (Solde : {{ balance }}€)."
   domain: automation
   source_url: https://github.com/kweebix/MyTurboSelf_HA/blob/main/blueprints/automation/myturboself_low_balance.yaml
   input:
     meals_sensor:
       name: "Capteur de repas restants"
-      description: "Le capteur 'Repas restants' de MyTurboSelf (ex: sensor.prenom_nom_repas_restants)."
       selector:
         entity:
           integration: myturboself
           domain: sensor
     threshold:
-      name: "Seuil d'alerte (nombre de repas)"
-      description: "L'alerte sera envoyée quand le nombre de repas est strictement inférieur à ce seuil."
+      name: "Seuil d'alerte"
       default: 3
       selector:
         number:
@@ -23,21 +26,27 @@ blueprint:
           mode: box
     balance_sensor:
       name: "(Optionnel) Capteur de solde"
-      description: "Le capteur de solde pour afficher le montant restant dans la notification."
       default:
       selector:
         entity:
           integration: myturboself
           domain: sensor
           device_class: monetary
+    notify_device:
+      name: "Appareil à notifier"
+      description: "Choisissez le service de notification (ex: notify.mobile_app_votre_telephone)."
+      selector:
+        text:
+          multiline: false
+      default: "notify.persistent_notification"
     actions:
-      name: "Actions"
-      description: "Actions à exécuter (ex: envoyer une notification). Vous pouvez utiliser {{ meals }} pour le nombre de repas et {{ balance }} pour le solde actuel."
+      name: "Actions additionnelles"
+      description: "Autres actions à exécuter en plus de la notification standard."
+      default: []
       selector:
         action: {}
 
 variables:
-  # On récupère les valeurs pour les rendre disponibles dans les actions
   meals_entity: !input meals_sensor
   meals: "{{ states(meals_entity) }}"
   balance_entity: !input balance_sensor
@@ -47,12 +56,24 @@ variables:
     {% else %}
       N/A
     {% endif %}
+  # URL du logo pour la notification
+  logo_url: "https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/icon.png"
 
 trigger:
   - platform: numeric_state
     entity_id: !input meals_sensor
     below: !input threshold
 
-action: !input actions
+action:
+  - service: !input notify_device
+    data:
+      title: "🍴 Alerte TurboSelf"
+      message: "Il ne reste que {{ meals }} repas sur le compte. (Solde restant : {{ balance }}€)"
+      data:
+        image: "{{ logo_url }}"
+        clickAction: "https://espacenumerique.turbo-self.com/Connexion.aspx"
+        notification_icon: "mdi:silverware-fork-knife"
+  - choose: []
+    default: !input actions
 
 mode: single
