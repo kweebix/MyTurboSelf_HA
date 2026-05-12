@@ -26,6 +26,7 @@ class AccountEvent:
     name: str
     date: datetime
     value: float
+    is_consumption: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -38,6 +39,7 @@ class AccountSnapshot:
     remote_meals_left: int | None
     user_data: dict[str, str]
     latest_event: AccountEvent | None
+    consumptions_today: int = 0
 
 
 LOGIN_USERNAME_FIELD = "ctl00$cntForm$txtLogin"

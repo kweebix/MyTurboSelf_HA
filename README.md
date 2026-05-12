@@ -6,7 +6,7 @@
 Intégration personnalisée pour Home Assistant permettant de suivre votre compte TurboSelf (cantine/restauration scolaire).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kweebix/myturboself/main/brand/logo.png" alt="MyTurboSelf Logo" width="200">
+  <img src="https://raw.githubusercontent.com/kweebix/myturboself_ha/main/brand/logo.png" alt="MyTurboSelf Logo" width="200">
 </p>
 
 ## Caractéristiques
