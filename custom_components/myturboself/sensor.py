@@ -179,7 +179,7 @@ def _coverage(
     fr_holidays = holidays.France() if skip_holidays else {}
 
     skip_vacation = config_entry.options.get(CONF_SKIP_VACATION, True)
-    school_zone = config_entry.options.get(CONF_SCHOOL_ZONE, "C")
+    school_zone = config_entry.options.get(CONF_SCHOOL_ZONE, "C").upper()
     school_dates = SchoolHolidayDates() if skip_vacation else None
 
     remaining = meals_left

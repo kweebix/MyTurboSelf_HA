@@ -97,7 +97,7 @@ class MyTurboSelfDataUpdateCoordinator(DataUpdateCoordinator[AccountSnapshot]):
 
         # Check vacations
         if self.config_entry.options.get(CONF_SKIP_VACATION, True):
-            zone = self.config_entry.options.get(CONF_SCHOOL_ZONE, "C")
+            zone = self.config_entry.options.get(CONF_SCHOOL_ZONE, "C").upper()
             if SchoolHolidayDates().is_holiday_for_zone(current_date, zone):
                 return idle_interval
 

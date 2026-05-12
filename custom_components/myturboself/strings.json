@@ -84,9 +84,9 @@
     },
     "school_zone": {
       "options": {
-        "A": "Zone A",
-        "B": "Zone B",
-        "C": "Zone C"
+        "a": "Zone A",
+        "b": "Zone B",
+        "c": "Zone C"
       }
     }
   }
