@@ -1,0 +1,36 @@
+blueprint:
+  name: "Alerte Solde TurboSelf Bas"
+  description: "Envoie une notification quand le solde de votre compte TurboSelf descend en dessous d'un certain seuil."
+  domain: automation
+  input:
+    turboself_sensor:
+      name: "Capteur de solde"
+      description: "Le capteur de solde MyTurboSelf (ex: sensor.mon_enfant_balance)"
+      selector:
+        entity:
+          domain: sensor
+          device_class: monetary
+    threshold:
+      name: "Seuil d'alerte"
+      description: "Le montant en € en dessous duquel l'alerte sera envoyée."
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "€"
+          mode: box
+    actions:
+      name: "Actions"
+      description: "Actions à exécuter (ex: envoyer une notification)."
+      selector:
+        action: {}
+
+trigger:
+  - platform: numeric_state
+    entity_id: !input turboself_sensor
+    below: !input threshold
+
+action: !input actions
+
+mode: single

@@ -1,7 +1,7 @@
 # MyTurboSelf for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-![Version](https://img.shields.io/badge/version-v0.1.7-orange.svg)
+![Version](https://img.shields.io/badge/version-v0.1.8-orange.svg)
 
 Intégration personnalisée pour Home Assistant permettant de suivre votre compte TurboSelf (cantine/restauration scolaire).
 
@@ -19,6 +19,8 @@ Intégration personnalisée pour Home Assistant permettant de suivre votre compt
   - Les **jours fériés** (France).
   - Les **vacances scolaires** (Zones A, B, C).
 - **Optimisation des ressources** : Fréquence de mise à jour dynamique (toutes les 15 min en période de repas, toutes les 4h la nuit et pendant les vacances).
+- **Lien de recharge direct** : Un bouton "Visiter l'appareil" dans Home Assistant vous redirige directement vers la page de recharge TurboSelf.
+- **Blueprints** : Automatisation prête à l'emploi pour vous alerter quand le solde est bas.
 
 ## Capteurs disponibles
 
@@ -55,6 +57,12 @@ Lors de l'installation (ou via le bouton "Configurer"), vous pouvez :
 - Activer/Désactiver l'ignorance des **jours fériés**.
 - Activer/Désactiver l'ignorance des **vacances scolaires** et choisir votre **Zone (A, B, C)**.
 - Définir un **prix de repas manuel** si la détection automatique échoue ou si vous souhaitez forcer un tarif spécifique.
+
+## Blueprints (Modèles d'automatisation)
+
+Cette intégration inclut un **Blueprint** pour vous faciliter la vie :
+- **Alerte Solde TurboSelf Bas** : Recevez une notification (ou toute autre action de votre choix) quand votre solde descend sous un certain seuil.
+  - Pour l'utiliser : Paramètres > Automatisations et scènes > Créer une automatisation > Utiliser un modèle > Alerte Solde TurboSelf Bas.
 
 ## Notes
 
