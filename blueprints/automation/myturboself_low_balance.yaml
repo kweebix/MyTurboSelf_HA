@@ -1,7 +1,7 @@
 blueprint:
   name: "Alerte Repas TurboSelf Bas"
   description: >
-    Envoie une notification sur votre téléphone quand le nombre de repas restants descend en dessous du seuil.
+    Envoie une notification sur votre téléphone quand le nombre de repas restants descend en dessous du seuil ou si le solde est négatif.
   domain: automation
   source_url: https://github.com/kweebix/MyTurboSelf_HA/blob/main/blueprints/automation/myturboself_low_balance.yaml
   input:
@@ -49,19 +49,34 @@ trigger:
   - platform: numeric_state
     entity_id: !input meals_sensor
     below: !input threshold
+  - platform: numeric_state
+    entity_id: !input balance_sensor
+    below: 0
 
 action:
   - service: !input notify_service
     data:
-      title: "🍴 Alerte TurboSelf"
+      title: >-
+        {% if balance_entity != none and states(balance_entity) | float < 0 %}
+          ⚠️ DETTE TURBO-SELF ⚠️
+        {% else %}
+          🍴 Alerte TurboSelf
+        {% endif %}
       message: >-
-        Il ne reste que {{ states(meals_entity) }} repas sur le compte.
-        {% if balance_entity != none %} (Solde restant : {{ states(balance_entity) }}€){% endif %}
+        {% if balance_entity != none and states(balance_entity) | float < 0 %}
+          Votre solde est négatif ({{ states(balance_entity) }}€). Rechargez immédiatement !
+        {% else %}
+          Il ne reste que {{ states(meals_entity) }} repas sur le compte.
+          {% if balance_entity != none %} (Solde restant : {{ states(balance_entity) }}€){% endif %}
+        {% endif %}
       data:
         image: "https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/icon.png"
         notification_icon: "mdi:silverware-fork-knife"
         clickAction: "https://espacenumerique.turbo-self.com/Connexion.aspx"
         url: "https://espacenumerique.turbo-self.com/Connexion.aspx"
+        # Priorité haute pour réveiller le téléphone si solde négatif
+        priority: high
+        ttl: 0
   - choose: []
     default: !input actions
 
