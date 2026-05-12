@@ -1,5 +1,8 @@
 {
   "name": "MyTurboSelf",
   "render_readme": true,
-  "brand": true
+  "brand": true,
+  "domains": ["myturboself"],
+  "homeassistant": "2024.1.0",
+  "zip_release": false
 }
