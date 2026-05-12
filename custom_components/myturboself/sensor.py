@@ -156,7 +156,7 @@ def _computed_meals_left(
 
     effective_price = _effective_meal_price(snapshot, config_entry)
     if effective_price and effective_price > 0:
-        return max(0, math.floor(snapshot.balance / effective_price))
+        return math.floor(snapshot.balance / effective_price)
 
     return snapshot.remote_meals_left
 

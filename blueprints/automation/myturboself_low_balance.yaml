@@ -57,14 +57,15 @@ action:
   - service: !input notify_service
     data:
       title: >-
-        {% if balance_entity != none and states(balance_entity) | float < 0 %}
+        {% if states(meals_entity) | int < 0 %}
           ⚠️ DETTE TURBO-SELF ⚠️
         {% else %}
           🍴 Alerte TurboSelf
         {% endif %}
       message: >-
-        {% if balance_entity != none and states(balance_entity) | float < 0 %}
-          Votre solde est négatif ({{ states(balance_entity) }}€). Rechargez immédiatement !
+        {% if states(meals_entity) | int < 0 %}
+          Attention ! Votre compte est à découvert de {{ states(meals_entity) | int | abs }} repas (Solde : {{ states(balance_entity) }}€). 
+          Veuillez recharger rapidement.
         {% else %}
           Il ne reste que {{ states(meals_entity) }} repas sur le compte.
           {% if balance_entity != none %} (Solde restant : {{ states(balance_entity) }}€){% endif %}
@@ -74,7 +75,6 @@ action:
         notification_icon: "mdi:silverware-fork-knife"
         clickAction: "https://espacenumerique.turbo-self.com/Connexion.aspx"
         url: "https://espacenumerique.turbo-self.com/Connexion.aspx"
-        # Priorité haute pour réveiller le téléphone si solde négatif
         priority: high
         ttl: 0
   - choose: []
