@@ -1,7 +1,7 @@
 # MyTurboSelf for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-![Version](https://img.shields.io/badge/version-v0.1.8-orange.svg)
+![Version](https://img.shields.io/badge/version-v0.2.1-orange.svg)
 
 Intégration personnalisée pour Home Assistant permettant de suivre votre compte TurboSelf (cantine/restauration scolaire).
 
