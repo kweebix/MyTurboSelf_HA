@@ -2,11 +2,6 @@ blueprint:
   name: "Alerte Repas TurboSelf Bas"
   description: >
     Envoie une notification sur votre téléphone quand le nombre de repas restants descend en dessous du seuil.
-    
-    Pour recevoir la notification sur votre téléphone :
-    1. Allez dans Outils de développement > Services.
-    2. Cherchez "notify.mobile_app_" pour trouver le nom de votre téléphone.
-    3. Copiez ce nom (ex: notify.mobile_app_iphone_de_thomas) dans le champ ci-dessous.
   domain: automation
   source_url: https://github.com/kweebix/MyTurboSelf_HA/blob/main/blueprints/automation/myturboself_low_balance.yaml
   input:
@@ -35,29 +30,20 @@ blueprint:
           device_class: monetary
     notify_service:
       name: "Service de notification"
-      description: "Le nom du service (ex: notify.mobile_app_votre_tel). Par défaut : notification dans l'interface Home Assistant."
-      default: "notify.persistent_notification"
+      description: "Le nom du service (ex: notify.mobile_app_votre_tel). Utilisez 'notify.notify' pour tous les appareils."
+      default: "notify.notify"
       selector:
         text: {}
     actions:
       name: "Actions additionnelles"
-      description: "Autres actions à exécuter (ex: allumer une lumière)."
+      description: "Autres actions à exécuter."
       default: []
       selector:
         action: {}
 
 variables:
   meals_entity: !input meals_sensor
-  meals: "{{ states(meals_entity) }}"
   balance_entity: !input balance_sensor
-  balance: >
-    {% if balance_entity != none %}
-      {{ states(balance_entity) }}
-    {% else %}
-      N/A
-    {% endif %}
-  # URL du logo haute résolution pour l'affichage sur mobile
-  logo_url: "https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/icon.png"
 
 trigger:
   - platform: numeric_state
@@ -68,13 +54,12 @@ action:
   - service: !input notify_service
     data:
       title: "🍴 Alerte TurboSelf"
-      message: "Il ne reste que {{ meals }} repas sur le compte. (Solde : {{ balance }}€)"
+      message: >-
+        Il ne reste que {{ states(meals_entity) }} repas sur le compte.
+        {% if balance_entity != none %} (Solde restant : {{ states(balance_entity) }}€){% endif %}
       data:
-        # Pour iOS et Android
-        image: "{{ logo_url }}"
-        # Icône pour la barre de statut (Android)
+        image: "https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/icon.png"
         notification_icon: "mdi:silverware-fork-knife"
-        # Action au clic : ouvre le site TurboSelf
         clickAction: "https://espacenumerique.turbo-self.com/Connexion.aspx"
         url: "https://espacenumerique.turbo-self.com/Connexion.aspx"
   - choose: []
