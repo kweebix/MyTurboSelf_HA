@@ -1,11 +1,12 @@
 blueprint:
   name: "Alerte Repas TurboSelf Bas"
   description: >
-    Envoie une notification quand le nombre de repas restants descend en dessous du seuil.
+    Envoie une notification sur votre téléphone quand le nombre de repas restants descend en dessous du seuil.
     
-    Exemples de texte :
-    - "Attention ! Il ne reste que {{ meals }} repas sur le compte TurboSelf."
-    - "Solde bas : {{ meals }} repas restants (Solde : {{ balance }}€)."
+    Pour recevoir la notification sur votre téléphone :
+    1. Allez dans Outils de développement > Services.
+    2. Cherchez "notify.mobile_app_" pour trouver le nom de votre téléphone.
+    3. Copiez ce nom (ex: notify.mobile_app_iphone_de_thomas) dans le champ ci-dessous.
   domain: automation
   source_url: https://github.com/kweebix/MyTurboSelf_HA/blob/main/blueprints/automation/myturboself_low_balance.yaml
   input:
@@ -32,16 +33,15 @@ blueprint:
           integration: myturboself
           domain: sensor
           device_class: monetary
-    notify_device:
-      name: "Appareil à notifier"
-      description: "Choisissez le service de notification (ex: notify.mobile_app_votre_telephone)."
-      selector:
-        text:
-          multiline: false
+    notify_service:
+      name: "Service de notification"
+      description: "Le nom du service (ex: notify.mobile_app_votre_tel). Par défaut : notification dans l'interface Home Assistant."
       default: "notify.persistent_notification"
+      selector:
+        text: {}
     actions:
       name: "Actions additionnelles"
-      description: "Autres actions à exécuter en plus de la notification standard."
+      description: "Autres actions à exécuter (ex: allumer une lumière)."
       default: []
       selector:
         action: {}
@@ -56,7 +56,7 @@ variables:
     {% else %}
       N/A
     {% endif %}
-  # URL du logo pour la notification
+  # URL du logo haute résolution pour l'affichage sur mobile
   logo_url: "https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/icon.png"
 
 trigger:
@@ -65,14 +65,18 @@ trigger:
     below: !input threshold
 
 action:
-  - service: !input notify_device
+  - service: !input notify_service
     data:
       title: "🍴 Alerte TurboSelf"
-      message: "Il ne reste que {{ meals }} repas sur le compte. (Solde restant : {{ balance }}€)"
+      message: "Il ne reste que {{ meals }} repas sur le compte. (Solde : {{ balance }}€)"
       data:
+        # Pour iOS et Android
         image: "{{ logo_url }}"
-        clickAction: "https://espacenumerique.turbo-self.com/Connexion.aspx"
+        # Icône pour la barre de statut (Android)
         notification_icon: "mdi:silverware-fork-knife"
+        # Action au clic : ouvre le site TurboSelf
+        clickAction: "https://espacenumerique.turbo-self.com/Connexion.aspx"
+        url: "https://espacenumerique.turbo-self.com/Connexion.aspx"
   - choose: []
     default: !input actions
 
