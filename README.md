@@ -3,6 +3,8 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 ![Version](https://img.shields.io/badge/version-v0.2.8-orange.svg)
 
+[![Ajouter à HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=kweebix%2FMyTurboSelf_HA)
+
 Intégration personnalisée pour Home Assistant permettant de suivre votre compte TurboSelf (cantine/restauration scolaire).
 
 <p align="center">
