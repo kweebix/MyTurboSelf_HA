@@ -1,0 +1,58 @@
+# Configuration de la carte pour votre tableau de bord Home Assistant
+# Pour l'utiliser : Ajouter une carte > Manuel > Copier-coller l'un des blocs ci-dessous.
+
+# OPTION 1 : Design Moderne (Cartes Tuiles avec Logo)
+# --------------------------------------------------
+type: vertical-stack
+cards:
+  - type: picture
+    image: https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/logo.png
+    tap_action:
+      action: url
+      url_path: https://espacenumerique.turbo-self.com/Connexion.aspx
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: tile
+        entity: sensor.votre_compte_solde
+        name: Solde
+        color: blue
+        icon: mdi:wallet
+      - type: tile
+        entity: sensor.votre_compte_repas_restants
+        name: Repas
+        color: orange
+        icon: mdi:silverware-fork-knife
+  - type: tile
+    entity: sensor.votre_compte_date_de_fin_previsionnelle
+    name: Fin estimée
+    color: red
+    icon: mdi:calendar-clock
+  - type: tile
+    entity: sensor.votre_compte_jours_de_service_restants
+    name: Cantine restante
+    color: green
+    icon: mdi:calendar-range
+
+# --------------------------------------------------
+
+# OPTION 2 : Design Visuel (Graphique + Jauge)
+# --------------------------------------------------
+type: vertical-stack
+cards:
+  - type: sensor
+    entity: sensor.votre_compte_solde
+    graph: line
+    name: Évolution du solde
+    detail: 1
+  - type: gauge
+    entity: sensor.votre_compte_repas_restants
+    min: -5
+    max: 20
+    name: Repas disponibles
+    severity:
+      green: 5
+      yellow: 2
+      red: -5
+    needle: true

@@ -22,7 +22,7 @@ blueprint:
           mode: box
     balance_sensor:
       name: "(Optionnel) Capteur de solde"
-      default:
+      default: ""
       selector:
         entity:
           integration: myturboself
@@ -45,30 +45,35 @@ variables:
   meals_entity: !input meals_sensor
   balance_entity: !input balance_sensor
 
+trigger_variables:
+  optional_balance_entity: !input balance_sensor
+
 trigger:
   - platform: numeric_state
     entity_id: !input meals_sensor
     below: !input threshold
-  - platform: numeric_state
-    entity_id: !input balance_sensor
-    below: 0
+  - platform: template
+    value_template: >-
+      {{ optional_balance_entity is string and optional_balance_entity != ""
+         and is_number(states(optional_balance_entity))
+         and states(optional_balance_entity) | float(0) < 0 }}
 
 action:
   - service: !input notify_service
     data:
       title: >-
-        {% if states(meals_entity) | int < 0 %}
+        {% if balance_entity is string and balance_entity != "" and states(balance_entity) | float(0) < 0 %}
           ⚠️ DETTE TURBO-SELF ⚠️
         {% else %}
           🍴 Alerte TurboSelf
         {% endif %}
       message: >-
-        {% if states(meals_entity) | int < 0 %}
-          Attention ! Votre compte est à découvert de {{ states(meals_entity) | int | abs }} repas (Solde : {{ states(balance_entity) }}€). 
+        {% if balance_entity is string and balance_entity != "" and states(balance_entity) | float(0) < 0 %}
+          Attention ! Votre compte est à découvert (Solde : {{ states(balance_entity) }}€).
           Veuillez recharger rapidement.
         {% else %}
           Il ne reste que {{ states(meals_entity) }} repas sur le compte.
-          {% if balance_entity != none %} (Solde restant : {{ states(balance_entity) }}€){% endif %}
+          {% if balance_entity is string and balance_entity != "" %} (Solde restant : {{ states(balance_entity) }}€){% endif %}
         {% endif %}
       data:
         image: "https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/icon.png"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 import math
+from decimal import Decimal, ROUND_FLOOR
 from typing import Any
 
 import holidays
@@ -91,7 +92,7 @@ def _manual_meal_price(config_entry: ConfigEntry) -> float | None:
             DEFAULT_MANUAL_MEAL_PRICE,
         )
     )
-    if value <= 0:
+    if not math.isfinite(value) or value <= 0:
         return None
 
     return value
@@ -154,22 +155,25 @@ def _computed_meals_left(
 ) -> int | None:
     """Return the number of meals left."""
 
-    effective_price = _effective_meal_price(snapshot, config_entry)
+    manual_price = _manual_meal_price(config_entry)
+    if manual_price is None and snapshot.remote_meals_left is not None:
+        return snapshot.remote_meals_left
+    effective_price = manual_price or snapshot.meal_price
     if effective_price and effective_price > 0:
-        return math.floor(snapshot.balance / effective_price)
-
-    return snapshot.remote_meals_left
+        return int((Decimal(str(snapshot.balance)) / Decimal(str(effective_price)))
+                   .to_integral_value(rounding=ROUND_FLOOR))
+    return None
 
 
 def _coverage(
     snapshot: AccountSnapshot,
     config_entry: ConfigEntry,
 ) -> tuple[int | None, date | None]:
-    """Return the number of service days covered and the last covered date."""
+    """Return the number of service days covered and the first uncovered date."""
 
     meals_left = _computed_meals_left(snapshot, config_entry)
-    if meals_left is None or meals_left <= 0:
-        return 0, None
+    if meals_left is None:
+        return None, None
 
     schedule = _schedule(config_entry)
     if not any(schedule.values()):
@@ -182,21 +186,26 @@ def _coverage(
     school_zone = config_entry.options.get(CONF_SCHOOL_ZONE, "C").upper()
     school_dates = SchoolHolidayDates() if skip_vacation else None
 
-    remaining = meals_left
+    remaining = max(0, meals_left)
     service_days = 0
     empty_date: date | None = None
-    current = dt_util.now().date()
+    today = dt_util.now().date()
+    current = today
 
     for _ in range(366 * 3):
         if skip_holidays and current in fr_holidays:
             current += timedelta(days=1)
             continue
 
+        if school_dates and not school_dates.min_year <= current.year <= school_dates.max_year:
+            return None, None
         if skip_vacation and school_dates and school_dates.is_holiday_for_zone(current, school_zone):
             current += timedelta(days=1)
             continue
 
         meals_today = schedule[current.weekday()]
+        if current == today:
+            meals_today = max(0, meals_today - snapshot.consumptions_today)
         if meals_today > 0:
             if remaining < meals_today:
                 empty_date = current
@@ -357,7 +366,7 @@ class MyTurboSelfServiceDaysLeftSensor(MyTurboSelfEntity, SensorEntity):
 
 
 class MyTurboSelfEstimatedEmptyDateSensor(MyTurboSelfEntity, SensorEntity):
-    """Expose the estimated last covered service date."""
+    """Expose the estimated first uncovered service date."""
 
     _attr_translation_key = "estimated_empty_date"
     _attr_icon = "mdi:calendar-clock"

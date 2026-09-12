@@ -9,6 +9,8 @@ import re
 
 import aiohttp
 
+from homeassistant.util import dt as dt_util
+
 from .const import DEFAULT_BASE_URL
 
 class MyTurboSelfApiError(Exception):
@@ -47,7 +49,8 @@ LOGIN_PASSWORD_FIELD = "ctl00$cntForm$txtMotDePasse"
 TIMEOUT = 20
 
 HOME_DATA_RE = re.compile(r'name=\"(.*?)\".*?value=\"(.*?)\"', re.DOTALL).findall
-CREDITS_RE = re.compile(r"[>\n ]*?(\d+,\d+)|>Soit : (\d*) repas").findall
+MONEY_RE = re.compile(r"[+−-]?\s*(?:\d{1,3}(?:[ \u00a0\u202f]\d{3})+|\d+),\d{2}(?!\d)")
+MEALS_RE = re.compile(r"Soit\s*:\s*([+−-]?\d+)\s*repas", re.IGNORECASE)
 USER_DATA_RE = re.compile(
     r'id=\"ctl00_cntForm_UC_HeaderTop_lbl(.*?)_Smartphone\"[^>]*>(.*?)<',
     re.DOTALL,
@@ -88,12 +91,14 @@ class TurboSelfPortalClient:
                 await self._login(session)
                 credits_page = await self._get_page(session, "CrediterCompte")
                 home_page = await self._get_page(session, "Accueil")
-        except aiohttp.ClientError as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             raise MyTurboSelfApiError("TurboSelf is unreachable") from err
 
         balance, meals_left, meal_price = self._parse_credits(credits_page)
         user_data = self._parse_user_data(home_page)
-        latest_event = self._parse_latest_event(home_page)
+        events = self._parse_events(home_page)
+        latest_event = max(events, key=lambda event: event.date, default=None)
+        today = dt_util.now().date()
 
         return AccountSnapshot(
             source="turboself_direct",
@@ -102,6 +107,10 @@ class TurboSelfPortalClient:
             remote_meals_left=meals_left,
             user_data=user_data,
             latest_event=latest_event,
+            consumptions_today=sum(
+                event.is_consumption and event.date.date() == today
+                for event in events
+            ),
         )
 
     async def _login(self, session: aiohttp.ClientSession) -> None:
@@ -118,7 +127,7 @@ class TurboSelfPortalClient:
         payload.setdefault("ctl00$cntForm$ssoUser", "")
         payload["ctl00$cntForm$btnConnexion"] = "Connexion"
 
-        response, response_url = await self._request(
+        response, _ = await self._request(
             session,
             "POST",
             "Connexion.aspx",
@@ -126,9 +135,7 @@ class TurboSelfPortalClient:
             referer=self._base_url + "Connexion.aspx",
         )
 
-        if response_url.endswith("/Connexion.aspx") and self._looks_like_login_page(
-            response
-        ):
+        if self._looks_like_login_page(response):
             raise MyTurboSelfAuthError("TurboSelf rejected the credentials")
 
     async def _get_page(self, session: aiohttp.ClientSession, page_name: str) -> str:
@@ -139,6 +146,8 @@ class TurboSelfPortalClient:
             "GET",
             page_name + ".aspx",
         )
+        if self._looks_like_login_page(response):
+            raise MyTurboSelfAuthError("TurboSelf session expired")
         return response
 
     async def _request(
@@ -174,28 +183,19 @@ class TurboSelfPortalClient:
     def _parse_credits(html: str) -> tuple[float, int | None, float | None]:
         """Parse balance, meals left and meal price."""
 
-        extracted = ["".join(match) for match in CREDITS_RE(html)]
-        values: list[float | int] = []
-
-        for item in extracted:
-            if not item:
-                continue
-            if "," in item:
-                values.append(float(item.replace(",", ".")))
-            else:
-                values.append(int(item))
-
-        if not values:
+        text = _strip_tags(html)
+        balance_match = MONEY_RE.search(text)
+        if balance_match is None:
             raise MyTurboSelfApiError("Could not parse the account balance")
-
-        balance = float(values[0])
-        meals_left = int(values[1]) if len(values) >= 2 else None
-        
-        # Calculate meal price if balance and meals_left are present
+        balance = _parse_amount(balance_match.group())
+        meals_match = MEALS_RE.search(text)
+        meals_left = (
+            int(meals_match.group(1).replace("−", "-")) if meals_match else None
+        )
+        # This ratio is an estimate: the portal's meal count may be truncated.
         meal_price = None
         if balance > 0 and meals_left and meals_left > 0:
             meal_price = round(balance / meals_left, 2)
-
         return balance, meals_left, meal_price
 
     @staticmethod
@@ -214,33 +214,40 @@ class TurboSelfPortalClient:
     def _parse_latest_event(page_html: str) -> AccountEvent | None:
         """Parse the latest account event."""
 
-        match = HISTORY_ROW_RE.search(page_html)
-        if match is None:
-            return None
+        events = TurboSelfPortalClient._parse_events(page_html)
+        return max(events, key=lambda event: event.date, default=None)
 
-        columns = TD_RE.findall(match.group(1))
-        if len(columns) < 2:
-            return None
+    @staticmethod
+    def _parse_events(page_html: str) -> list[AccountEvent]:
+        """Read dated events and identify explicitly labelled meal debits."""
+        events = []
+        for row in HISTORY_ROW_RE.findall(page_html):
+            columns = TD_RE.findall(row)
+            if len(columns) < 2:
+                continue
+            value_match = re.search(r"<span[^>]*>(.*?)</span>", columns[1], re.DOTALL)
+            if value_match is None:
+                continue
+            raw_value = _strip_tags(value_match.group(1))
+            raw_name = _strip_tags(re.sub(
+                r"<span[^>]*>.*?</span>", "", columns[1], flags=re.DOTALL
+            ))
+            try:
+                event_date = datetime.strptime(_strip_tags(columns[0]), "%d/%m/%Y - %H:%M")
+                amount_match = MONEY_RE.search(raw_value)
+                numeric_value = _parse_amount(amount_match.group() if amount_match else raw_value)
+            except ValueError:
+                continue
+            is_consumption = numeric_value < 0 and any(
+                word in raw_name.casefold() for word in ("repas", "consommation", "passage")
+            )
+            events.append(AccountEvent(raw_name, event_date, numeric_value, is_consumption))
+        return events
 
-        value_match = re.search(r"<span[^>]*>(.*?)</span>", columns[1], re.DOTALL)
-        if value_match is None:
-            return None
 
-        raw_value = _strip_tags(value_match.group(1))
-        raw_name = _strip_tags(re.sub(r"<span[^>]*>.*?</span>", "", columns[1], flags=re.DOTALL))
-        raw_date = _strip_tags(columns[0])
-
-        try:
-            event_date = datetime.strptime(raw_date, "%d/%m/%Y - %H:%M")
-            numeric_value = float(raw_value.replace(",", "."))
-        except ValueError:
-            return None
-
-        return AccountEvent(
-            name=raw_name,
-            date=event_date,
-            value=numeric_value,
-        )
+def _parse_amount(value: str) -> float:
+    """Normalize French decimal amounts, including signed grouped values."""
+    return float("".join(value.split()).replace("−", "-").replace(",", "."))
 
 
 def _strip_tags(value: str) -> str:

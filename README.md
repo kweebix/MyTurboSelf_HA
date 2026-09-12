@@ -1,12 +1,12 @@
 # MyTurboSelf for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-![Version](https://img.shields.io/badge/version-v0.2.1-orange.svg)
+![Version](https://img.shields.io/badge/version-v0.2.8-orange.svg)
 
 Intégration personnalisée pour Home Assistant permettant de suivre votre compte TurboSelf (cantine/restauration scolaire).
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/kweebix/myturboself_ha/main/brand/logo.png" alt="MyTurboSelf Logo" width="200">
+  <img src="https://raw.githubusercontent.com/kweebix/MyTurboSelf_HA/main/brand/logo.png" alt="MyTurboSelf Logo" width="200">
 </p>
 
 ## Caractéristiques
@@ -71,3 +71,14 @@ Cette intégration inclut un **Blueprint** pour vous faciliter la vie :
 - L'intervalle de mise à jour est de 15 minutes entre 06:00 et 23:00 les jours de repas.
 - Il n'y a aucune logique de réservation dans cette intégration.
 - Les données sont extraites directement du portail web TurboSelf.
+
+## Précision des estimations
+
+- Sans tarif manuel, le nombre de repas affiché par le portail est prioritaire. Le prix automatique (solde / repas) reste une estimation, car le portail peut arrondir le nombre de repas.
+- Les débits de repas du jour identifiés dans l’historique ne sont pas comptés une seconde fois dans la prévision. Si le portail ne fournit pas ces lignes ou les publie en retard, la prévision peut rester prudente.
+- Avec un solde insuffisant, la date indique le prochain jour de repas non couvert. Sans nombre de repas exploitable, les prévisions sont indisponibles.
+- Dans `dashboard_card.yaml`, copiez une seule option et remplacez les identifiants `sensor.votre_compte_*` par ceux de votre installation.
+
+## Tests
+
+Avec Python 3.13 : `pip install -r requirements-test.txt`, puis `python -m pytest`.

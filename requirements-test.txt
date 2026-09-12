@@ -1,0 +1,5 @@
+homeassistant==2025.3.4
+holidays==0.48
+vacances-scolaires-france==0.11.0
+pytest==9.1.1
+pytest-asyncio==1.4.0

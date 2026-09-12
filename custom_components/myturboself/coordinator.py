@@ -26,6 +26,7 @@ from .const import (
     CONF_SKIP_HOLIDAYS,
     CONF_SKIP_VACATION,
     DOMAIN,
+    DEFAULT_WEEKDAY_MEALS,
     MEAL_DAY_OPTIONS,
     SCAN_INTERVAL,
 )
@@ -45,7 +46,7 @@ class MyTurboSelfDataUpdateCoordinator(DataUpdateCoordinator[AccountSnapshot]):
             config_entry=config_entry,
             name=DOMAIN,
             update_interval=SCAN_INTERVAL,
-            always_update=False,
+            always_update=True,
         )
         self._client = TurboSelfPortalClient(
             config_entry.data[CONF_USERNAME],
@@ -82,7 +83,7 @@ class MyTurboSelfDataUpdateCoordinator(DataUpdateCoordinator[AccountSnapshot]):
 
         # Check if today is a meal day
         schedule_key = MEAL_DAY_OPTIONS[weekday]
-        meals = self.config_entry.options.get(schedule_key, [])
+        meals = self.config_entry.options.get(schedule_key, DEFAULT_WEEKDAY_MEALS[schedule_key])
         
         # Handle legacy int format
         has_meals_today = (isinstance(meals, int) and meals > 0) or (isinstance(meals, list) and len(meals) > 0)
@@ -98,7 +99,9 @@ class MyTurboSelfDataUpdateCoordinator(DataUpdateCoordinator[AccountSnapshot]):
         # Check vacations
         if self.config_entry.options.get(CONF_SKIP_VACATION, True):
             zone = self.config_entry.options.get(CONF_SCHOOL_ZONE, "C").upper()
-            if SchoolHolidayDates().is_holiday_for_zone(current_date, zone):
+            school_dates = SchoolHolidayDates()
+            if (school_dates.min_year <= current_date.year <= school_dates.max_year
+                    and school_dates.is_holiday_for_zone(current_date, zone)):
                 return idle_interval
 
         # Active time: 6:00 to 23:00 on meal days to cover breakfast and dinner

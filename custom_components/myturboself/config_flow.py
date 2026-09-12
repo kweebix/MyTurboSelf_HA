@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 import voluptuous as vol
@@ -36,6 +37,20 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _meal_selection(value: list[str] | int) -> list[str]:
+    """Convert the previous numeric schedule to selector values."""
+    if isinstance(value, int):
+        return ["lunch", "breakfast", "dinner"][:max(0, min(value, 3))]
+    return value
+
+
+def _finite_price(value: float) -> float:
+    """Reject non-finite prices before they reach sensor calculations."""
+    if not math.isfinite(value):
+        raise vol.Invalid("Meal price must be finite")
+    return value
 
 
 async def validate_input(
@@ -163,7 +178,7 @@ class MyTurboSelfConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(
                 CONF_MANUAL_MEAL_PRICE,
                 default=float(DEFAULT_MANUAL_MEAL_PRICE),
-            ): vol.Coerce(float),
+            ): vol.All(vol.Coerce(float), vol.Range(min=0), _finite_price),
             vol.Required(
                 CONF_SKIP_HOLIDAYS,
                 default=True,
@@ -312,7 +327,7 @@ class MyTurboSelfOptionsFlow(config_entries.OptionsFlow):
                         DEFAULT_MANUAL_MEAL_PRICE,
                     )
                 ),
-            ): vol.Coerce(float),
+            ): vol.All(vol.Coerce(float), vol.Range(min=0), _finite_price),
             vol.Required(
                 CONF_SKIP_HOLIDAYS,
                 default=options.get(CONF_SKIP_HOLIDAYS, True),
@@ -354,7 +369,7 @@ class MyTurboSelfOptionsFlow(config_entries.OptionsFlow):
             data_schema[
                 vol.Optional(
                     key,
-                    default=options.get(key, DEFAULT_WEEKDAY_MEALS[key]),
+                    default=_meal_selection(options.get(key, DEFAULT_WEEKDAY_MEALS[key])),
                 )
             ] = meal_selector
 
